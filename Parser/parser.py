@@ -2,6 +2,12 @@
 from lark import Lark
 
 grammar = Lark(r"""
+    %import common.SIGNED_NUMBER -> NUMBER
+    %import common.ESCAPED_STRING -> STRING
+    %import common.CNAME -> CNAME
+    %import common.WS
+    %ignore WS
+
     program: (statement | declaration)*
     declaration: "int" variable";"
                 | "int["NUMBER"] " variable";"
@@ -12,9 +18,14 @@ grammar = Lark(r"""
             | "while ("b_expr") {" statement "}"
             | "read " variable";"
             | "write " variable";"
+    assignment: variable ":="value";"
+    variable: CNAME
     ?value: NUMBER
     | array
     | record
+
+    array: "[" [value ("," value)*] "]"
+    record: "(" value "," value ")"
 
     b_expr: "true" -> true
           | "false" -> false
@@ -22,7 +33,10 @@ grammar = Lark(r"""
           | b_expr opb b_expr
           | "not " b_expr
     a_expr: a_expr opa a_expr
-        | value
+        | NUMBER
+        | record ".fst"
+        | record ".snd"
+        | array "["a_expr"]"
     opa: "+"
             | "-"
             | "*"
@@ -36,13 +50,4 @@ grammar = Lark(r"""
         | ">="
         | "=="
         | "!="
-    assignment: variable ":="value";"
-    variable: CNAME
-    array: "[" [value ("," value)*] "]"
-    record: "(" value "," value ")"
-    %import common.SIGNED_NUMBER -> NUMBER
-    %import common.ESCAPED_STRING -> STRING
-    %import common.CNAME -> CNAME
-    %import common.WS
-    %ignore WS
 """, start="program")
