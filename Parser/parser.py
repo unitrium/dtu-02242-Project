@@ -18,9 +18,18 @@ grammar = Lark(r"""
             | "while ("b_expr") {" statement "}"
             | "read " variable";"
             | "write " variable";"
-    assignment: variable ":="value";"
+    array_access: variable "["a_expr"]"
+    record_fst_access: variable ".fst"
+    record_snd_access: variable ".snd"
+    record_access: record_fst_access
+                 | record_snd_access
+    access: array_access
+          | record_access
+          | variable
+    assignment: access ":="a_expr";"
     variable: CNAME
     ?value: NUMBER
+    | access
     | array
     | record
 
@@ -33,10 +42,8 @@ grammar = Lark(r"""
           | b_expr opb b_expr
           | "not " b_expr
     a_expr: a_expr opa a_expr
+        | access
         | NUMBER
-        | record ".fst"
-        | record ".snd"
-        | array "["a_expr"]"
     opa: "+"
             | "-"
             | "*"
