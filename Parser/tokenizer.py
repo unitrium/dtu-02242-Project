@@ -9,4 +9,4 @@ BOOLEAN_OPERATORS = ["&", "|", "!"]
 
 class Token:
     value: str
-    integer: bool
+    variable: bool
