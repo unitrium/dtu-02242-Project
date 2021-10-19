@@ -27,25 +27,53 @@ class Edge:
         self.label = label
 
     def __str__(self) -> str:
-        return f"Node {self.start.number} to node {self.end.number} with action {self.label}"
+        end = 'End node' if self.end.last else ''
+        return f"Node {self.start.number} ({id(self.start)}) to node {self.end.number} ({id(self.end)}) with action {self.label} {end}"
 
 
-def edges(start: Node, end: Node, action: Tree) -> Set[Edge]:
+def compute_edges(start: Node, end: Node, action: Tree) -> Set[Edge]:
     if action.data == "assignment":
         # Parsing the Tree to get the variable that is being assigned.
         variable = expand_access(action.children[0])
-
         # Parsing the Tree to get the value the variable is being assigned to.
         value = beautiful_expr(expand_a_expr(action.children[1]))
-        return Edge(start, end, f"{variable} := {value}")
+        return [Edge(start, end, f"{variable} := {value}")]
     elif action.data == "if" or action.data == "else" or action.data == "while":
         b_expr = expand_b_expr(action.children[0])
         not_b_expr = ["not"] + b_expr
-        return Edge(start, end, f"{beautiful_expr(b_expr)}")
+        if_branch_node = Node(start.number+1)
+        end.number = if_branch_node.number+1
+        if action.data == "if":
+            return [Edge(start, if_branch_node, beautiful_expr(b_expr))] + compute_edges(if_branch_node, end, action.children[1]) + [Edge(start, end, beautiful_expr(not_b_expr))]
+        elif action.data == "else":
+            else_branch_node = Node(if_branch_node.number+1)
+            end.number = else_branch_node.number+1
+            return [Edge(start, if_branch_node, beautiful_expr(b_expr))] + compute_edges(if_branch_node, end, action.children[1]) + [Edge(start, else_branch_node, beautiful_expr(not_b_expr))] + compute_edges(else_branch_node, end, action.children[2])
+        else:  # while branching
+            end.number += 1
+            return [Edge(start, if_branch_node, beautiful_expr(b_expr))] + compute_edges(if_branch_node, start, action.children[1]) + [Edge(start, end, beautiful_expr(not_b_expr))]
     elif action.data == "read":
-        return Edge(start, end, f"read {expand_access(action.children[0])}")
+        return [Edge(start, end, f"read {expand_access(action.children[0])}")]
     elif action.data == "write":
-        return Edge(start, end, f"write {expand_access(action.children[0])}")
+        return [Edge(start, end, f"write {expand_access(action.children[0])}")]
+    elif action.data == "statement":
+        end.number = start.number + 1
+        return compute_edges(start, end, action.children[0])
+
+
+def high_level_edges(tree: Tree):
+    if tree.data == "program":
+        start_node = Node(0)
+        end_node = Node(-1)
+        edges: List[Edge] = []
+        for child in tree.children:
+            edges += compute_edges(start_node, end_node, child)
+            start_node = end_node
+            end_node = Node(end_node.number)
+        start_node.last = True
+        return edges
+    else:
+        raise Exception("Supplied tree does not start with program.")
 
 
 def expand_a_expr(tree: Tree) -> List[str]:
@@ -84,7 +112,7 @@ def expand_b_expr(tree: Tree) -> List[str]:
     return expr
 
 
-def beautiful_expr(unfold_expr: List[str]):
+def beautiful_expr(unfold_expr: List[str]) -> str:
     return " ".join(unfold_expr)
 
 
