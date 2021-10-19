@@ -13,12 +13,17 @@ grammar = Lark(r"""
                 | "int["NUMBER"] " variable";"
                 | "{int fst; int snd} " variable";"
     statement: assignment
-            | "if ("b_expr") {" statement "}"
-            | "if ("b_expr") {" statement "} else {"statement"}"
-            | "while ("b_expr") {" statement "}"
-            | "read " variable";"
-            | "write " variable";"
-    array_access: variable "["a_expr"]"
+            | if
+            | else
+            | while
+            | read
+            | write
+    if: "if ("b_expr") {" statement "}"
+    else: "if ("b_expr") {" statement "} else {"statement"}"
+    while: "while ("b_expr") {" statement "}"
+    read: "read " access";"
+    write: "write " access";"
+    array_access: variable "["(access | NUMBER)"]"
     record_fst_access: variable ".fst"
     record_snd_access: variable ".snd"
     record_access: record_fst_access
@@ -40,21 +45,35 @@ grammar = Lark(r"""
           | "false" -> false
           | a_expr opr a_expr
           | b_expr opb b_expr
-          | "not " b_expr
+          | not
+    not: "not" b_expr
     a_expr: a_expr opa a_expr
         | access
         | NUMBER
-    opa: "+"
-            | "-"
-            | "*"
-            | "/"
-            | "%"
-    opb: "&"
-        | "|"
-    opr: "<"
-        | ">"
-        | "<="
-        | ">="
-        | "=="
-        | "!="
+    opa: add
+            | sub
+            | mul
+            | div
+            | mod
+    add : "+"
+    sub: "-"
+    mul: "*"
+    div: "/"
+    mod: "%"
+    opb: and
+        | or
+    and: "&"
+    or: "|"
+    opr: inf
+        | infe
+        | sup
+        | supe
+        | eq
+        | neq
+    inf: "<"
+    infe: "<="
+    sup: ">"
+    supe: ">="
+    eq: "=="
+    neq: "!="
 """, start="program")
