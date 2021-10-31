@@ -4,7 +4,7 @@
 
 
 
-from typing import List, Set
+from typing import List, Set, Tuple
 from lark import Tree, Token
 class Node:
     """
@@ -85,9 +85,11 @@ def compute_edges(start: Node, end: Node, action: Tree) -> Set[Edge]:
         return compute_edges(start, end, action.children[0])
 
 
-def high_level_edges(tree: Tree):
+def high_level_edges(tree: Tree) -> Tuple[List[Edge], Node]:
+    """High level function to create a program grah, returns a set of edges and the initial node."""
     if tree.data == "program":
         start_node = Node(0)
+        init_node = start_node
         end_node = Node(-1)
         edges: List[Edge] = []
         for child in tree.children:
@@ -95,7 +97,7 @@ def high_level_edges(tree: Tree):
             start_node = end_node
             end_node = Node(end_node.number)
         start_node.last = True
-        return edges
+        return edges, init_node
     else:
         raise Exception("Supplied tree does not start with program.")
 
