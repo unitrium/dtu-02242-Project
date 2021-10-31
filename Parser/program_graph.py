@@ -7,9 +7,14 @@
 from typing import List, Set
 from lark import Tree, Token
 class Node:
-    """A class representing a node in a program graph. The initial node has number 0. The final node has the boolean set to true."""
+    """
+    A class representing a node in a program graph.
+    The initial node has number 0.
+    The final node has the boolean set to true.
+    """
     number: int
     last: bool
+    outgoing_edges: List["Edge"]
 
     def __init__(self, number: int, last: bool = False) -> None:
         self.number = number
@@ -28,34 +33,53 @@ class Edge:
 
     def __str__(self) -> str:
         end = 'End node' if self.end.last else ''
-        return f"Node {self.start.number} ({id(self.start)}) to node {self.end.number} ({id(self.end)}) with action {self.label} {end}"
+        return f"Node {self.start.number} ({id(self.start)}) to node \
+         {self.end.number} ({id(self.end)}) with action {self.label} {end}"
 
 
 def compute_edges(start: Node, end: Node, action: Tree) -> Set[Edge]:
-    if action.data == "assignment":
-        # Parsing the Tree to get the variable that is being assigned.
-        variable = expand_access(action.children[0])
-        # Parsing the Tree to get the value the variable is being assigned to.
-        value = beautiful_expr(expand_a_expr(action.children[1]))
-        return [Edge(start, end, f"{variable} := {value}")]
+    if action.data == "assignment" or action.data == "read" or action.data == "write":
+        edge = None
+        if action.data == "assignment":
+            # Parsing the Tree to get the variable that is being assigned.
+            variable = expand_access(action.children[0])
+            # Parsing the Tree to get the value the variable is being assigned to.
+            value = beautiful_expr(expand_a_expr(action.children[1]))
+            edge = Edge(start, end, f"{variable} := {value}")
+        elif action.data == "read":
+            edge = Edge(
+                start, end, f"read {expand_access(action.children[0])}")
+        else:
+            edge = Edge(
+                start, end, f"write {expand_access(action.children[0])}")
+        start.outgoing_edges.append(edge)
+        return [edge]
     elif action.data == "if" or action.data == "else" or action.data == "while":
         b_expr = expand_b_expr(action.children[0])
         not_b_expr = ["not"] + b_expr
         if_branch_node = Node(start.number+1)
         end.number = if_branch_node.number+1
-        if action.data == "if":
-            return [Edge(start, if_branch_node, beautiful_expr(b_expr))] + compute_edges(if_branch_node, end, action.children[1]) + [Edge(start, end, beautiful_expr(not_b_expr))]
-        elif action.data == "else":
+        if_edge = Edge(start, if_branch_node, beautiful_expr(b_expr))
+        else_edge = None
+        if action.data == "else":
             else_branch_node = Node(if_branch_node.number+1)
             end.number = else_branch_node.number+1
-            return [Edge(start, if_branch_node, beautiful_expr(b_expr))] + compute_edges(if_branch_node, end, action.children[1]) + [Edge(start, else_branch_node, beautiful_expr(not_b_expr))] + compute_edges(else_branch_node, end, action.children[2])
-        else:  # while branching
-            end.number += 1
-            return [Edge(start, if_branch_node, beautiful_expr(b_expr))] + compute_edges(if_branch_node, start, action.children[1]) + [Edge(start, end, beautiful_expr(not_b_expr))]
-    elif action.data == "read":
-        return [Edge(start, end, f"read {expand_access(action.children[0])}")]
-    elif action.data == "write":
-        return [Edge(start, end, f"write {expand_access(action.children[0])}")]
+            else_edge = Edge(start, else_branch_node,
+                             beautiful_expr(not_b_expr))
+            additional_edges = compute_edges(
+                if_branch_node, end, action.children[1]) + compute_edges(else_branch_node, end, action.children[2])
+        else:  # if and while
+            else_edge = Edge(start, end, beautiful_expr(not_b_expr))
+            if action.data == "if":
+                additional_edges = compute_edges(
+                    if_branch_node, end, action.children[1])
+            else:  # while branching
+                end.number += 1
+                additional_edges = compute_edges(
+                    if_branch_node, start, action.children[1])
+        start.outgoing_edges.append(if_edge)
+        start.outgoing_edges.append(else_edge)
+        return [if_edge, else_edge] + additional_edges
     elif action.data == "statement":
         end.number = start.number + 1
         return compute_edges(start, end, action.children[0])
