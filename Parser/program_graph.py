@@ -21,6 +21,7 @@ class Node:
     def __init__(self, number: int, last: bool = False) -> None:
         self.number = number
         self.last = last
+        self.outgoing_edges = []
 
 
 class Action:
@@ -147,9 +148,11 @@ def expand_a_expr(tree: Tree) -> List[str]:
         if isinstance(child, Token):
             expr.append(child.value)
         elif child.data == "access":
-            expr.append(expand_access(child))
+            var, _ = expand_access(child)
+            expr.append(var)
         elif child.data == "opa":
-            expr.append(expand_opa(child))
+            var, _ = expand_opa(child)
+            expr.append(var)
         else:  # Case nested in another opa
             for expr_a in expand_a_expr(child):
                 expr.append(expr_a)
