@@ -2,10 +2,12 @@
 """Program graph structure is a dict whose keys are the index of the nodes. Under each item is a dict with nodes reachable from this node and action."""
 
 
-
-
 from typing import List, Set, Tuple
 from lark import Tree, Token
+POSSIBLE_ACTIONS = ["assign_var", "assign_arr",
+                    "assign_rec", "read", "write", "boolean"]
+
+
 class Node:
     """
     A class representing a node in a program graph.
@@ -21,68 +23,88 @@ class Node:
         self.last = last
 
 
+class Action:
+    action_type: str
+    variables: List[str]
+    label: str
+
+    def __init__(self, action_type: str, variables: List[str], label: str) -> None:
+        if action_type not in POSSIBLE_ACTIONS:
+            raise Exception(f"Unknown action: {action_type}")
+        self.action_type = action_type
+        self.variables = variables
+        self.label = label
+
+    def __str__(self) -> str:
+        return self.label
+
+
 class Edge:
     start: Node
     end: Node
-    label: str
+    action: str
 
-    def __init__(self, start: Node, end: Node, label: str) -> None:
+    def __init__(self, start: Node, end: Node, action: Action) -> None:
         self.start = start
         self.end = end
-        self.label = label
+        self.action = action
 
     def __str__(self) -> str:
         end = 'End node' if self.end.last else ''
         return f"Node {self.start.number} ({id(self.start)}) to node \
-         {self.end.number} ({id(self.end)}) with action {self.label} {end}"
+         {self.end.number} ({id(self.end)}) with action {self.action} {end}"
 
 
-def compute_edges(start: Node, end: Node, action: Tree) -> Set[Edge]:
-    if action.data == "assignment" or action.data == "read" or action.data == "write":
-        edge = None
-        if action.data == "assignment":
-            # Parsing the Tree to get the variable that is being assigned.
-            variable = expand_access(action.children[0])
+def compute_edges(start: Node, end: Node, tree: Tree) -> Set[Edge]:
+    if tree.data == "assignment" or tree.data == "read" or tree.data == "write":
+        action: Action = None
+        # Parsing the Tree to get the variable that is being accessed.
+        variable, variable_type = expand_access(tree.children[0])
+        if tree.data == "assignment":
             # Parsing the Tree to get the value the variable is being assigned to.
-            value = beautiful_expr(expand_a_expr(action.children[1]))
-            edge = Edge(start, end, f"{variable} := {value}")
-        elif action.data == "read":
-            edge = Edge(
-                start, end, f"read {expand_access(action.children[0])}")
+            value = beautiful_expr(expand_a_expr(tree.children[1]))
+
+            action = Action(f"assign_{variable_type}", [
+                            variable], f"{variable} := {value}")
+        elif tree.data == "read":
+            action = Action("read", [variable], f"read {variable}")
         else:
-            edge = Edge(
-                start, end, f"write {expand_access(action.children[0])}")
+            action = Action("write", [variable], f"write {variable}")
+        edge = Edge(start, end, action)
         start.outgoing_edges.append(edge)
         return [edge]
-    elif action.data == "if" or action.data == "else" or action.data == "while":
-        b_expr = expand_b_expr(action.children[0])
+    elif tree.data == "if" or tree.data == "else" or tree.data == "while":
+        b_expr = expand_b_expr(tree.children[0])
         not_b_expr = ["not"] + b_expr
         if_branch_node = Node(start.number+1)
         end.number = if_branch_node.number+1
-        if_edge = Edge(start, if_branch_node, beautiful_expr(b_expr))
-        else_edge = None
-        if action.data == "else":
+        if_action = Action("boolean", [], label=beautiful_expr(b_expr))
+        if_edge = Edge(start, if_branch_node, if_action)
+        else_edge: Edge = None
+        else_action = Action(
+            "boolean", [], label=beautiful_expr(not_b_expr))
+        if tree.data == "else":
             else_branch_node = Node(if_branch_node.number+1)
             end.number = else_branch_node.number+1
             else_edge = Edge(start, else_branch_node,
-                             beautiful_expr(not_b_expr))
+                             else_action)
             additional_edges = compute_edges(
-                if_branch_node, end, action.children[1]) + compute_edges(else_branch_node, end, action.children[2])
+                if_branch_node, end, tree.children[1]) + compute_edges(else_branch_node, end, tree.children[2])
         else:  # if and while
-            else_edge = Edge(start, end, beautiful_expr(not_b_expr))
-            if action.data == "if":
+            else_edge = Edge(start, end, else_action)
+            if tree.data == "if":
                 additional_edges = compute_edges(
-                    if_branch_node, end, action.children[1])
+                    if_branch_node, end, tree.children[1])
             else:  # while branching
                 end.number += 1
                 additional_edges = compute_edges(
-                    if_branch_node, start, action.children[1])
+                    if_branch_node, start, tree.children[1])
         start.outgoing_edges.append(if_edge)
         start.outgoing_edges.append(else_edge)
         return [if_edge, else_edge] + additional_edges
-    elif action.data == "statement":
+    elif tree.data == "statement":
         end.number = start.number + 1
-        return compute_edges(start, end, action.children[0])
+        return compute_edges(start, end, tree.children[0])
 
 
 def high_level_edges(tree: Tree) -> Tuple[List[Edge], Node]:
@@ -196,25 +218,23 @@ def expand_opb(tree: Tree) -> str:
         return "|"
 
 
-def expand_access(tree: Tree) -> str:
-    """Given an access tree returns the variable access."""
+def expand_access(tree: Tree) -> Tuple[str, str]:
+    """Given an access tree returns the variable access and the type of access.
+    var: variable access, arr: array access, rec: record access.
+    """
     tree = tree.children[0]
     if tree.data == 'variable':
-        return tree.children[0].value
+        return tree.children[0].value, "var"
     elif tree.data == "record_access":
         variable_name = tree.children[0].children[0].children[0].value
         if tree.children[0].data == "record_fst_access":
-            return f"{variable_name}.fst"
+            return f"{variable_name}.fst", "rec"
         else:
-            return f"{variable_name}.snd"
+            return f"{variable_name}.snd", "rec"
     else:  # Array access
         variable_name = tree.children[0].children[0].value
         if isinstance(tree.children[1], Token):  # Case direct number
-            return f"{variable_name}[{tree.children[1].value}]"
+            return f"{variable_name}[{tree.children[1].value}]", "arr"
         else:  # Another access to dig in
-            return f"{variable_name}[{expand_access(tree.children[1].children[0])}]"
-
-
-program_graph = {
-
-}
+            expr, _ = expand_access(tree.children[1].children[0])
+            return f"{variable_name}[{expr}]", "arr"
