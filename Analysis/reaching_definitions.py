@@ -13,5 +13,5 @@ def gen_rd(action: Action, scr_node: Node, tar_node: Node):
     return None
 
 
-def generate_constraints():
+def generate_constrains(edge):
     pass
