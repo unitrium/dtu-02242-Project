@@ -2,7 +2,7 @@
 """Program graph structure is a dict whose keys are the index of the nodes. Under each item is a dict with nodes reachable from this node and action."""
 
 
-from typing import List, Set, Tuple
+from typing import Dict, List, Set, Tuple
 from lark import Tree, Token
 POSSIBLE_ACTIONS = ["assign_var", "assign_arr",
                     "assign_rec", "read", "write", "boolean"]
@@ -239,5 +239,21 @@ def expand_access(tree: Tree) -> Tuple[str, str]:
         if isinstance(tree.children[1], Token):  # Case direct number
             return f"{variable_name}[{tree.children[1].value}]", "arr"
         else:  # Another access to dig in
-            expr, _ = expand_access(tree.children[1].children[0])
+            expr, _ = expand_access(tree.children[1])
             return f"{variable_name}[{expr}]", "arr"
+
+
+def get_all_variables(tree: Tree, variables: Dict):
+    """Returns all variables that will be encountered"""
+    if tree.data == "variable":
+        variables["variable"].add(tree.children[0].value)
+    elif tree.data == "record_access":
+        variables["record"].add(tree.children[0].children[0].children[0].value)
+    elif tree.data == "array_access":
+        variables["array"].add(tree.children[0].children[0].value)
+        if isinstance(tree.children[1], Tree):
+            get_all_variables(tree.children[1], variables)
+    else:
+        for child in tree.children:
+            if isinstance(child, Tree):
+                get_all_variables(child, variables)
