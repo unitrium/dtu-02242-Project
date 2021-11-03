@@ -1,17 +1,19 @@
+from typing import Dict, List
+from Analysis.reaching_definitions import init_reaching_definition_assignment, merge_rd_assignment, update_mapping_rd
 from Parser import Node, Edge, Action, POSSIBLE_ACTIONS
+from .utils import copy_mapping
 
 
-def kill_rd(action: Action, src_node: Node, tar_node: Node):
-    if action.action_type == "assign_var" or action.action_type == "read":
-        return "all"
-    return None
-
-
-def gen_rd(action: Action, scr_node: Node, tar_node: Node):
-    if action.action_type == "assign_var" or action.action_type == "assign_arr" or action.action_type == "assign_rec" or "read":
-        return (action.variables[0][0], scr_node, tar_node)
-    return None
-
-
-def generate_constraints():
-    pass
+def generate_constrains_LV(edges: List[Edge], all_variables):
+    # assignment = init_reaching_definition_assignment(all_variables)
+    constraints = {
+        # 0: assignment
+    }
+    for edge in edges:
+        if edge.start.number in constraints.keys():
+            constraints[edge.start.number] = merge_rd_assignment(constraints[edge.start.number], update_mapping_rd(mapping=constraints[edge.end.number],
+                                                                                                                   action=edge.action, src_node=edge.start, dst_node=edge.end))
+        else:
+            constraints[edge.start.number] = update_mapping_rd(mapping=constraints[edge.end.number],
+                                                               action=edge.action, src_node=edge.start, dst_node=edge.end)
+    return constraints
