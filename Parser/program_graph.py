@@ -3,6 +3,7 @@
 
 
 from typing import Dict, List, Set, Tuple
+from .parser import grammar
 from lark import Tree, Token
 POSSIBLE_ACTIONS = ["assign_var", "assign_arr",
                     "assign_rec", "read", "write", "boolean"]
@@ -54,6 +55,42 @@ class Edge:
         end = 'End node' if self.end.last else ''
         return f"Node {self.start.number} ({id(self.start)}) to node \
          {self.end.number} ({id(self.end)}) with action {self.action} {end}"
+
+
+class ProgramGraph:
+    nodes: Dict[int, Node]
+    edges: List[Edge]
+    variables: Dict[str, Set]
+
+    def __init__(self, program: str) -> None:
+        tree = grammar.parse(program)
+        self.edges, init_node = high_level_edges(tree)
+        check_edges(self.edges)
+        self.nodes = {
+            0: init_node
+        }
+        self.__explore_nodes()
+        self.variables = {
+            "variable": set(),
+            "array": set(),
+            "record": set()
+        }
+        get_all_variables(tree, self.variables)
+
+    def get_edges(self) -> List[Edge]:
+        """Returns a deep copy of the edges."""
+        return [edge for edge in self.edges]
+
+    def get_nodes(self) -> List[Node]:
+        """Returns a deep copy of the nodes as a list."""
+        return [node for node in self.nodes.values()]
+
+    def __explore_nodes(self):
+        """Parses the edges to find all nodes."""
+        edges_to_explore = self.get_edges()
+        while len(edges_to_explore) > 0:
+            edge = edges_to_explore.pop()
+            self.nodes[edge.end.number] = edge.end
 
 
 def compute_edges(start: Node, end: Node, tree: Tree) -> Set[Edge]:
