@@ -1,49 +1,73 @@
-from typing import Dict, List
-from Parser import Node, Edge, Action, POSSIBLE_ACTIONS
-from .utils import copy_mapping
+from typing import Dict
+from Parser import Edge, POSSIBLE_ACTIONS, ProgramGraph
+
+from .abstract_analysis import AbstractAnalysis
 
 
-def update_mapping_rd(mapping: dict, action: Action, src_node: Node, dst_node: Node):
-    new_mapping = copy_mapping(mapping)
-    if action.action_type == "assign_var" or action.action_type == "read":
-        new_mapping["variable"][action.variables[0]] = {
-            f"{src_node.number},{dst_node.number}"}
-    elif action.action_type == "assign_arr":
-        new_mapping["array"][action.variables[0]] = new_mapping["array"][action.variables[0]].add(
-            f"{src_node.number},{dst_node.number}")
-    elif action.action_type == "assign_rec":
-        new_mapping["record"][action.variables[0]] = new_mapping["record"][action.variables[0]].add(
-            f"{src_node.number},{dst_node.number}")
-    return new_mapping
+class ReachingDefintionAnalysis(AbstractAnalysis):
+    @staticmethod
+    def merge(mapping1: Dict, mapping2: Dict) -> Dict:
+        """Merge two mappings."""
+        merge = AbstractAnalysis.merge(mapping1, mapping2)
+        if merge is not None:
+            return merge
+        new_matching = ReachingDefintionAnalysis.copy_mapping(mapping1)
+        for var_type, variables in mapping2.items():
+            for var in variables.keys():
+                for pair in var.values():
+                    new_matching[var_type][var].add(pair)
+        return new_matching
 
+    @staticmethod
+    def included(mapping1: Dict, mapping2: Dict) -> bool:
+        """Checks if the mapping1 is included in the mapping 2."""
+        undef = AbstractAnalysis.included(mapping1, mapping2)
+        if undef is not None:
+            return undef
+        for var_type, variables in mapping1.items():
+            for var, mapping in variables.items():
+                for pair in mapping:
+                    if pair not in mapping2[var_type][var]:
+                        return False
+        return True
 
-def init_reaching_definition_assignment(all_variables: Dict) -> Dict:
-    assignment = {}
-    for var_type, variables in all_variables.items():
-        for var in variables:
-            assignment[var_type][var] = {"?,0"}
-    return assignment
+    @staticmethod
+    def init_mapping(programGraph: ProgramGraph) -> Dict:
+        """Initializes the mapping according to the analysis."""
+        assignment = {
+            "variable": {},
+            "array": {},
+            "record": {}
+        }
+        for var_type, variables in programGraph.variables.items():
+            for var in variables:
+                assignment[var_type][var] = {"?,0"}
+        return assignment
 
+    @staticmethod
+    def update_mapping(mapping: Dict, edge: Edge) -> Dict:
+        """Update the mapping based on the kill/gen functions of the analysis."""
+        new_mapping = ReachingDefintionAnalysis.copy_mapping(mapping)
+        if edge.action.action_type == "assign_var" or edge.action.action_type == "read":
+            new_mapping["variable"][edge.action.variables[0]] = {
+                f"{edge.start.number},{edge.end.number}"}
+        elif edge.action.action_type == "assign_arr":
+            new_mapping["array"][edge.action.variables[0]] = new_mapping["array"][edge.action.variables[0][0]].add(
+                f"{edge.start.number},{edge.end.number}")
+        elif edge.action.action_type == "assign_rec":
+            new_mapping["record"][edge.action.variables[0]] = new_mapping["record"][edge.action.variables[0][0]].add(
+                f"{edge.start.number},{edge.end.number}")
+        return new_mapping
 
-def merge_rd_assignment(matching1: dict, matching2: dict) -> dict:
-    new_matching = copy_mapping(matching1)
-    for var_type, variables in matching2.items():
-        for var in variables.keys():
-            for pair in var.values():
-                new_matching[var_type][var].add(pair)
-    return new_matching
-
-
-def generate_constrains(edges: List[Edge], all_variables):
-    assignment = init_reaching_definition_assignment(all_variables)
-    constraints = {
-        0: assignment
-    }
-    for edge in edges:
-        if edge.end.number in constraints.keys():
-            constraints[edge.end.number] = merge_rd_assignment(constraints[edge.end.number], update_mapping_rd(mapping=constraints[edge.start.number],
-                                                                                                               action=edge.action, src_node=edge.start, dst_node=edge.end))
-        else:
-            constraints[edge.end.number] = update_mapping_rd(mapping=constraints[edge.start.number],
-                                                             action=edge.action, src_node=edge.start, dst_node=edge.end)
-    return constraints
+    @staticmethod
+    def copy_mapping(mapping: Dict) -> Dict:
+        """Returns a deep copy of a mapping."""
+        new = {
+            "variable": {},
+            "array": {},
+            "record": {}
+        }
+        for var_type, variables in mapping.items():
+            for var, mapping in variables.items():
+                new[var_type][var] = set([pair for pair in mapping])
+        return new
