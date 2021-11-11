@@ -1,5 +1,4 @@
-from typing import List
-from Parser import Edge, ProgramGraph
+from Parser import ProgramGraph
 from .abstract_analysis import AbstractAnalysis
 
 
@@ -15,6 +14,5 @@ def solve_chaotic_iteration(programGraph: ProgramGraph, analysis: AbstractAnalys
         s_q0 = analysis.update_mapping(aa[edge.start.number], edge)
         if not analysis.included(mapping1=s_q0, mapping2=aa[edge.end.number]):
             aa[edge.end.number] = analysis.merge(s_q0, aa[edge.end.number])
-        print(i)
         i += 1
     return aa

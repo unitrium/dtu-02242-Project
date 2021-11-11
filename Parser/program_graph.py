@@ -1,12 +1,12 @@
 """Converts AST to program graph."""
-"""Program graph structure is a dict whose keys are the index of the nodes. Under each item is a dict with nodes reachable from this node and action."""
 
 
-from typing import Dict, List, Set, Tuple
+from typing import Dict, List, Set, Tuple, Union
 from .parser import grammar
+from .struc_elements import AExpr, BExpr, VariableAccess
 from lark import Tree, Token
-POSSIBLE_ACTIONS = ["assign_var", "assign_arr",
-                    "assign_rec", "read", "write", "boolean"]
+from .utils import check_edges
+POSSIBLE_ACTIONS = ["assign", "read", "write", "boolean"]
 
 
 class Node:
@@ -27,24 +27,37 @@ class Node:
 
 class Action:
     action_type: str
-    variables: List[str]
+    variable: VariableAccess
+    right_expression: Union[AExpr, BExpr]
     label: str
 
-    def __init__(self, action_type: str, variables: List[str], label: str) -> None:
+    def __init__(self, action_type: str, variable: VariableAccess = None, right_expression: Union[AExpr, BExpr] = None) -> None:
         if action_type not in POSSIBLE_ACTIONS:
             raise Exception(f"Unknown action: {action_type}")
+        elif action_type == "assign":
+            if not variable:
+                raise Exception(
+                    "Creating assign action without specifying the left variable.")
+            elif not right_expression:
+                raise Exception(
+                    "Creating action without specifying the right expression.")
         self.action_type = action_type
-        self.variables = variables
-        self.label = label
+        self.variable = variable
+        self.right_expression = right_expression
 
     def __str__(self) -> str:
-        return self.label
+        if self.action_type == "assign":
+            return f"{self.variable} := {self.right_expression}"
+        elif self.action_type == "read" or self.action_type == "write":
+            return f"{self.action_type} {self.variable}"
+        elif self.action_type == "boolean":
+            return str(self.right_expression)
 
 
 class Edge:
     start: Node
     end: Node
-    action: str
+    action: Action
 
     def __init__(self, start: Node, end: Node, action: Action) -> None:
         self.start = start
@@ -97,30 +110,29 @@ def compute_edges(start: Node, end: Node, tree: Tree) -> Set[Edge]:
     if tree.data == "assignment" or tree.data == "read" or tree.data == "write":
         action: Action = None
         # Parsing the Tree to get the variable that is being accessed.
-        variable, variable_type = expand_access(tree.children[0])
+        variable = expand_access(tree.children[0])
         if tree.data == "assignment":
             # Parsing the Tree to get the value the variable is being assigned to.
-            value = beautiful_expr(expand_a_expr(tree.children[1]))
+            value = expand_a_expr(tree.children[1])
 
-            action = Action(f"assign_{variable_type}", [
-                            variable], f"{variable} := {value}")
+            action = Action("assign", variable, value)
         elif tree.data == "read":
-            action = Action("read", [variable], f"read {variable}")
+            action = Action("read", variable)
         else:
-            action = Action("write", [variable], f"write {variable}")
+            action = Action("write", variable)
         edge = Edge(start, end, action)
         start.outgoing_edges.append(edge)
         return [edge]
     elif tree.data == "if" or tree.data == "else" or tree.data == "while":
         b_expr = expand_b_expr(tree.children[0])
-        not_b_expr = ["not"] + b_expr
+        not_b_expr = BExpr(["not"] + b_expr.copy().expression)
         if_branch_node = Node(start.number+1)
         end.number = if_branch_node.number+1
-        if_action = Action("boolean", [], label=beautiful_expr(b_expr))
+        if_action = Action("boolean", right_expression=b_expr)
         if_edge = Edge(start, if_branch_node, if_action)
         else_edge: Edge = None
         else_action = Action(
-            "boolean", [], label=beautiful_expr(not_b_expr))
+            "boolean", right_expression=not_b_expr)
         if tree.data == "else":
             else_branch_node = Node(if_branch_node.number+1)
             end.number = else_branch_node.number+1
@@ -162,62 +174,40 @@ def high_level_edges(tree: Tree) -> Tuple[List[Edge], Node]:
         raise Exception("Supplied tree does not start with program.")
 
 
-def check_edges(edges: List[Edge]):
-    """Check the coherence of a graph."""
-    flat = {}
-    for edge in edges:
-        if edge.start.number not in flat:
-            flat[edge.start.number] = id(edge.start)
-        elif flat[edge.start.number] != id(edge.start):
-            raise Exception(
-                f"Incoherent graph. Node {edge.start.number} is present twice but with different objects.")
-        if edge.end.number not in flat:
-            flat[edge.end.number] = id(edge.end)
-        elif flat[edge.end.number] != id(edge.end):
-            raise Exception(
-                f"Incoherent graph. Node {edge.end.number} is present twice but with different objects.")
-
-
-def expand_a_expr(tree: Tree) -> List[str]:
+def expand_a_expr(tree: Tree) -> AExpr:
     """Given an a_expr tree unfolds the a_expr"""
-    expr = []
+    expr = AExpr([])
     for child in tree.children:
         if isinstance(child, Token):
-            expr.append(child.value)
+            expr.expression.append(child.value)
         elif child.data == "access":
-            var, _ = expand_access(child)
-            expr.append(var)
+            var = expand_access(child)
+            expr.expression.append(var)
         elif child.data == "opa":
-            var, _ = expand_opa(child)
-            expr.append(var)
+            var = expand_opa(child)
+            expr.expression.append(var)
         else:  # Case nested in another opa
-            for expr_a in expand_a_expr(child):
-                expr.append(expr_a)
+            for expr_a in expand_a_expr(child).expression:
+                expr.expression.append(expr_a)
     return expr
 
 
-def expand_b_expr(tree: Tree) -> List[str]:
-    expr = []
+def expand_b_expr(tree: Tree) -> BExpr:
+    expr = BExpr([])
     for child in tree.children:
         if isinstance(child, Token):
-            expr.append(child.value)
+            expr.expression.append(child.value)
         elif child.data == "a_expr":
-            for expr_a in expand_a_expr(child):
-                expr.append(expr_a)
+            expr.expression.append(expand_a_expr(child))
         elif child.data == "opr":
-            expr.append(expand_opr(child))
+            expr.expression.append(expand_opr(child))
         elif child.data == "opb":
-            expr.append(expand_opb(child))
+            expr.expression.append(expand_opb(child))
         else:  # Case nested in another opa
             if child.data == "not":
-                expr.append("not")
-            for expr_b in expand_b_expr(child):
-                expr.append(expr_b)
+                expr.expression.append("not")
+            expr.expression.append(expand_b_expr(child))
     return expr
-
-
-def beautiful_expr(unfold_expr: List[str]) -> str:
-    return " ".join(unfold_expr)
 
 
 def expand_opa(tree: Tree) -> str:
@@ -258,26 +248,26 @@ def expand_opb(tree: Tree) -> str:
         return "|"
 
 
-def expand_access(tree: Tree) -> Tuple[str, str]:
+def expand_access(tree: Tree) -> VariableAccess:
     """Given an access tree returns the variable access and the type of access.
     var: variable access, arr: array access, rec: record access.
     """
     tree = tree.children[0]
     if tree.data == 'variable':
-        return tree.children[0].value, "var"
+        return VariableAccess(tree.children[0].value, "var")
     elif tree.data == "record_access":
         variable_name = tree.children[0].children[0].children[0].value
         if tree.children[0].data == "record_fst_access":
-            return f"{variable_name}.fst", "rec"
+            return VariableAccess(variable_name, "rec", "fst")
         else:
-            return f"{variable_name}.snd", "rec"
+            return VariableAccess(variable_name, "rec", "snd")
     else:  # Array access
         variable_name = tree.children[0].children[0].value
         if isinstance(tree.children[1], Token):  # Case direct number
-            return f"{variable_name}[{tree.children[1].value}]", "arr"
+            return VariableAccess(variable_name, "arr", child_accesses=AExpr([tree.children[1].value]))
         else:  # Another access to dig in
-            expr, _ = expand_access(tree.children[1])
-            return f"{variable_name}[{expr}]", "arr"
+            a_expr = expand_a_expr(tree.children[1])
+            return VariableAccess(variable_name, "arr", child_accesses=a_expr)
 
 
 def get_all_variables(tree: Tree, variables: Dict):

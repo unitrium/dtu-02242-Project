@@ -48,15 +48,18 @@ class ReachingDefintionAnalysis(AbstractAnalysis):
     def update_mapping(mapping: Dict, edge: Edge) -> Dict:
         """Update the mapping based on the kill/gen functions of the analysis."""
         new_mapping = ReachingDefintionAnalysis.copy_mapping(mapping)
-        if edge.action.action_type == "assign_var" or edge.action.action_type == "read":
-            new_mapping["variable"][edge.action.variables[0]] = {
-                f"{edge.start.number},{edge.end.number}"}
-        elif edge.action.action_type == "assign_arr":
-            new_mapping["array"][edge.action.variables[0]] = new_mapping["array"][edge.action.variables[0][0]].add(
-                f"{edge.start.number},{edge.end.number}")
-        elif edge.action.action_type == "assign_rec":
-            new_mapping["record"][edge.action.variables[0]] = new_mapping["record"][edge.action.variables[0][0]].add(
-                f"{edge.start.number},{edge.end.number}")
+        if edge.action.action_type == "assign" or edge.action.action_type == "read":
+            if edge.action.variable.variable_type == "var":
+                new_mapping["variable"][edge.action.variable.name] = {
+                    f"{edge.start.number},{edge.end.number}"}
+            elif edge.action.variable.variable_type == "arr":
+                new_mapping["array"][edge.action.variable.name].add(
+                    f"{edge.start.number},{edge.end.number}"
+                )
+            elif edge.action.action_type == "rec":
+                new_mapping["record"][edge.action.variable.name].add(
+                    f"{edge.start.number},{edge.end.number}"
+                )
         return new_mapping
 
     @staticmethod

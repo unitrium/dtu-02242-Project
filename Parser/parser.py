@@ -23,14 +23,14 @@ grammar = Lark(r"""
     while: "while ("b_expr") {" statement "}"
     read: "read " access";"
     write: "write " access";"
-    array_access: variable "["(access | NUMBER)"]"
-    record_fst_access: variable ".fst"
-    record_snd_access: variable ".snd"
-    record_access: record_fst_access
-                 | record_snd_access
     access: array_access
           | record_access
           | variable
+    array_access: variable "["(access | NUMBER | a_expr)"]"
+    record_access: record_fst_access
+                 | record_snd_access
+    record_fst_access: variable ".fst"
+    record_snd_access: variable ".snd"
     assignment: access ":="a_expr";"
     variable: CNAME
     ?value: NUMBER
