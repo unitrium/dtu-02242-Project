@@ -14,20 +14,20 @@ class VariableAccess:
     def __init__(self, name: str, variable_type: str, rec_type: str = "", child_accesses: "AExpr" = None) -> None:
         self.name = name
         self.variable_type = variable_type
-        if variable_type == "rec":
+        if variable_type == "record":
             if not rec_type == "fst" and not rec_type == "snd":
                 raise Exception(
                     "Record accessed without specifying .fst or .snd.")
             self.rec_type = rec_type
-        elif variable_type == "arr":
+        elif variable_type == "array":
             if child_accesses is None:
                 raise Exception("Array accessed without specifying the index")
             self.child_accesses = child_accesses
 
     def __str__(self) -> str:
-        if self.variable_type == "var":
+        if self.variable_type == "variable":
             return self.name
-        elif self.variable_type == "rec":
+        elif self.variable_type == "record":
             return f"{self.name}.{self.rec_type}"
         return f"{self.name}[{self.child_accesses}]"
 
@@ -57,6 +57,18 @@ class AbstractExpr:
                 new = expr.copy()
             new_expr.append(new)
         return AbstractExpr(new_expr)
+
+    def get_variables(self) -> List[VariableAccess]:
+        """Returns a list of all the variables accessed in the expression."""
+        variables = []
+        for variable in self.expression:
+            if isinstance(variable, VariableAccess):
+                if variable.variable_type == "variable" or variable.variable_type == "record":
+                    variables.append(variable)
+                else:
+                    for child in variable.child_accesses.get_variables():
+                        variables.append(child)
+        return variables
 
 
 class AExpr(AbstractExpr):

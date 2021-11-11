@@ -254,20 +254,20 @@ def expand_access(tree: Tree) -> VariableAccess:
     """
     tree = tree.children[0]
     if tree.data == 'variable':
-        return VariableAccess(tree.children[0].value, "var")
+        return VariableAccess(tree.children[0].value, "variable")
     elif tree.data == "record_access":
         variable_name = tree.children[0].children[0].children[0].value
         if tree.children[0].data == "record_fst_access":
-            return VariableAccess(variable_name, "rec", "fst")
+            return VariableAccess(variable_name, "record", "fst")
         else:
-            return VariableAccess(variable_name, "rec", "snd")
+            return VariableAccess(variable_name, "record", "snd")
     else:  # Array access
         variable_name = tree.children[0].children[0].value
         if isinstance(tree.children[1], Token):  # Case direct number
-            return VariableAccess(variable_name, "arr", child_accesses=AExpr([tree.children[1].value]))
+            return VariableAccess(variable_name, "array", child_accesses=AExpr([tree.children[1].value]))
         else:  # Another access to dig in
             a_expr = expand_a_expr(tree.children[1])
-            return VariableAccess(variable_name, "arr", child_accesses=a_expr)
+            return VariableAccess(variable_name, "array", child_accesses=a_expr)
 
 
 def get_all_variables(tree: Tree, variables: Dict):

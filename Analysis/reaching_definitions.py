@@ -49,15 +49,11 @@ class ReachingDefintionAnalysis(AbstractAnalysis):
         """Update the mapping based on the kill/gen functions of the analysis."""
         new_mapping = ReachingDefintionAnalysis.copy_mapping(mapping)
         if edge.action.action_type == "assign" or edge.action.action_type == "read":
-            if edge.action.variable.variable_type == "var":
+            if edge.action.variable.variable_type == "variable":
                 new_mapping["variable"][edge.action.variable.name] = {
                     f"{edge.start.number},{edge.end.number}"}
-            elif edge.action.variable.variable_type == "arr":
-                new_mapping["array"][edge.action.variable.name].add(
-                    f"{edge.start.number},{edge.end.number}"
-                )
-            elif edge.action.action_type == "rec":
-                new_mapping["record"][edge.action.variable.name].add(
+            else:
+                new_mapping[edge.action.variable.variable_type][edge.action.variable.name].add(
                     f"{edge.start.number},{edge.end.number}"
                 )
         return new_mapping
