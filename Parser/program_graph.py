@@ -98,6 +98,10 @@ class ProgramGraph:
         """Returns a deep copy of the nodes as a list."""
         return [node for node in self.nodes.values()]
 
+    def get_last_node(self) -> Node:
+        """Returns the last node of the program graph."""
+        return self.nodes[len(self.nodes)-1]
+
     def __explore_nodes(self):
         """Parses the edges to find all nodes."""
         edges_to_explore = self.get_edges()

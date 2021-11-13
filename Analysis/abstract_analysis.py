@@ -35,3 +35,7 @@ class AbstractAnalysis:
     def copy_mapping(mapping: Dict) -> Dict:
         """Returns a deep copy of a mapping."""
         pass
+
+    @staticmethod
+    def reverse() -> bool:
+        return False
