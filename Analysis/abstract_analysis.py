@@ -29,12 +29,14 @@ class AbstractAnalysis:
     @staticmethod
     def update_mapping(mapping: Dict, edge: Edge) -> Dict:
         """Update the mapping based on the kill/gen functions of the analysis."""
-        pass
+        if mapping == "undef":
+            return mapping
 
     @staticmethod
     def copy_mapping(mapping: Dict) -> Dict:
         """Returns a deep copy of a mapping."""
-        pass
+        if mapping == "undef":
+            return mapping
 
     @staticmethod
     def reverse() -> bool:

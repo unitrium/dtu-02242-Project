@@ -47,6 +47,8 @@ class ReachingDefintionAnalysis(AbstractAnalysis):
     @staticmethod
     def update_mapping(mapping: Dict, edge: Edge) -> Dict:
         """Update the mapping based on the kill/gen functions of the analysis."""
+        if AbstractAnalysis.update_mapping(mapping, edge) is not None:
+            return AbstractAnalysis.update_mapping(mapping, edge)
         new_mapping = ReachingDefintionAnalysis.copy_mapping(mapping)
         if edge.action.action_type == "assign" or edge.action.action_type == "read":
             if edge.action.variable.variable_type == "variable":

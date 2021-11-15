@@ -18,11 +18,13 @@ class Node:
     number: int
     last: bool
     outgoing_edges: List["Edge"]
+    incoming_edges: List["Edge"]
 
     def __init__(self, number: int, last: bool = False) -> None:
         self.number = number
         self.last = last
         self.outgoing_edges = []
+        self.incoming_edges = []
 
 
 class Action:
@@ -63,6 +65,8 @@ class Edge:
         self.start = start
         self.end = end
         self.action = action
+        self.start.outgoing_edges.append(self)
+        self.end.incoming_edges.append(self)
 
     def __str__(self) -> str:
         end = 'End node' if self.end.last else ''
@@ -125,7 +129,6 @@ def compute_edges(start: Node, end: Node, tree: Tree) -> Set[Edge]:
         else:
             action = Action("write", variable)
         edge = Edge(start, end, action)
-        start.outgoing_edges.append(edge)
         return [edge]
     elif tree.data == "if" or tree.data == "else" or tree.data == "while":
         b_expr = expand_b_expr(tree.children[0])
@@ -153,8 +156,6 @@ def compute_edges(start: Node, end: Node, tree: Tree) -> Set[Edge]:
                 end.number += 1
                 additional_edges = compute_edges(
                     if_branch_node, start, tree.children[1])
-        start.outgoing_edges.append(if_edge)
-        start.outgoing_edges.append(else_edge)
         return [if_edge, else_edge] + additional_edges
     elif tree.data == "statement":
         end.number = start.number + 1

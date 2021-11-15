@@ -9,6 +9,8 @@ class LiveVariableAnalysis(ReachingDefintionAnalysis):
     @staticmethod
     def update_mapping(mapping: Dict, edge: Edge) -> Dict:
         """Update the mapping based on the kill/gen functions of the analysis."""
+        if AbstractAnalysis.update_mapping(mapping, edge) is not None:
+            return AbstractAnalysis.update_mapping(mapping, edge)
         new_mapping = LiveVariableAnalysis.copy_mapping(mapping)
         # Gen functions
         if edge.action.action_type == "assign":
