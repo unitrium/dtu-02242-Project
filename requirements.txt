@@ -1,3 +1,4 @@
 autopep8==1.5.7
+lark==1.0.0
 pycodestyle==2.7.0
 toml==0.10.2
