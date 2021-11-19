@@ -1,38 +1,68 @@
-from typing import Any, List, Tuple
+from typing import List, Set, Tuple
 from Parser import ProgramGraph
-from Parser.program_graph import Edge, Node
+from Parser.program_graph import Node
 from .abstract_analysis import AbstractAnalysis
-from random import randint
+from .reversePostorder import sort_rp, compute_reverse_post_order
+
+
+class Worklist:
+    currentNodes: List[Node]
+    pendingNodes: Set[Node]
+
+    def __init__(self):
+        self.currentNodes = []
+        self.pendingNodes = set()
+
+    def is_empty(self) -> bool:
+        return len(self.currentNodes) == 0 and len(self.pendingNodes) == 0
 
 
 class AbstractSolverAlgorithm:
-    @staticmethod
-    def insert(node: Node, worklist: List[Node]) -> None:
+    def __init__(self, programGraph: ProgramGraph) -> "AbstractSolverAlgorithm":
         pass
 
-    @staticmethod
-    def empty() -> List[Node]:
-        return []
+    def insert(self, node: Node, worklist: Worklist) -> None:
+        pass
 
-    @staticmethod
-    def extract(worklist: List[Node]) -> Node:
-        return worklist.pop(0)
+    def empty(self) -> Worklist:
+        return Worklist()
+
+    def extract(self, worklist: Worklist) -> Node:
+        return worklist.currentNodes.pop(0)
+
+
+class RoundRobinAlgorithm(AbstractSolverAlgorithm):
+    rP: dict
+
+    def __init__(self, programGraph: ProgramGraph) -> "AbstractSolverAlgorithm":
+        _, self.rP = compute_reverse_post_order(programGraph)
+
+    def insert(self, node: Node, worklist: Worklist) -> None:
+        if node not in set(worklist.currentNodes):
+            worklist.pendingNodes.add(node)
+
+    def extract(self, worklist: Worklist) -> Node:
+        if len(worklist.currentNodes) == 0:
+            vrp = sort_rp(list(worklist.pendingNodes), self.rP)
+            q = vrp.pop(0)
+            worklist.currentNodes = vrp
+            return q
+        return worklist.currentNodes.pop(0)
 
 
 class FIFOSolverAlgorithm(AbstractSolverAlgorithm):
-    @staticmethod
-    def insert(node: Node, worklist: List[Node]) -> None:
-        worklist.append(node)
+    def insert(self, node: Node, worklist: Worklist) -> None:
+        worklist.currentNodes.append(node)
 
 
 class LIFOSolverAlgorithm(AbstractSolverAlgorithm):
-    @staticmethod
-    def insert(node: Node, worklist: List[Node]) -> None:
-        worklist.insert(0, node)
+    def insert(self, node: Node, worklist: Worklist) -> None:
+        worklist.currentNodes.insert(0, node)
 
 
-def worklist(prgmGraph: ProgramGraph, analysis: AbstractAnalysis, algorithm: AbstractSolverAlgorithm) -> Tuple[dict, int]:
+def worklist(prgmGraph: ProgramGraph, analysis: AbstractAnalysis, algorithmClass: AbstractSolverAlgorithm) -> Tuple[dict, int]:
     """Runs the worklist algorithm. Returns the resulting assignment and the number of steps required to reach it."""
+    algorithm: AbstractSolverAlgorithm = algorithmClass(prgmGraph)
     aa = {}
     worklist = algorithm.empty()
     for node in prgmGraph.get_nodes():
@@ -43,7 +73,7 @@ def worklist(prgmGraph: ProgramGraph, analysis: AbstractAnalysis, algorithm: Abs
         first_node = prgmGraph.get_last_node().number
     aa[first_node] = analysis.init_mapping(prgmGraph)
     steps = 0
-    while len(worklist) != 0:
+    while not worklist.is_empty():
         q0 = algorithm.extract(worklist)
         if analysis.reverse():
             for edge in q0.incoming_edges:
