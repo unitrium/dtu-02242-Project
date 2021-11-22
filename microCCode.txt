@@ -1,0 +1,51 @@
+a := 11;
+b := 4;
+left := 0;
+right := 1;
+int[20] Data;
+int[25] Node;
+R.fst := 200;
+R.snd := 420;
+
+while (true) {
+	write b-a;
+	while ( ( R.fst / 2 ) == 0) {
+		read x;
+		write R.fst;
+		
+		while (R.snd <= 430) {
+			if ( a/2 == 0 ) {
+				write x;
+			} else {
+				write y;
+			}
+		}
+
+		if ( Data != 0 ) {
+			if (Data < 20) {
+	            if ( left == 0 ) {
+               		left = Node(Data);
+				} else {
+                    write R.fst;
+				} 
+			} else {
+				if ( right == 0 ) {
+               		right = Node(Data);
+				} else {
+                   	write R.snd;
+				}
+			}
+		}
+
+		int[20] temp;
+		while ( Data < 19 ) {
+			while (Node <= Data) {
+ 		        if Data[right] > Data[right+1] {
+            		temp = Data[right];
+				}
+ 	           	Data[ right ] = Data[ right + 1 ]
+            	Data[ right + 1 ] = temp
+			}
+		}
+	}
+}
