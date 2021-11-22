@@ -47,5 +47,24 @@ while (true) {
             	Data[ right + 1 ] = temp
 			}
 		}
+
+		while ( Data < 20 ) {
+			while (Node <= Data) {
+ 		        if Data[right] > Data[right+1] {
+            		temp = Data[right];
+				}
+ 	           	Data[ right ] = Data[ right + 1 ]
+            	Data[ right + 1 ] = temp
+				while ( Data < 5 ) {
+					while (Node <= Data) {
+ 		        		if Data[right] > Data[right+1] {
+            				temp = Data[right];
+						}
+ 	           			Data[ right ] = Data[ right + 1 ]
+            			Data[ right + 1 ] = temp
+					}
+				}
+			}
+		}
 	}
 }
