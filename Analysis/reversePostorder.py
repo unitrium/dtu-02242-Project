@@ -12,20 +12,20 @@ def compute_reverse_post_order(prgmGraph: ProgramGraph):
     tree and the a dict indicating the reverse post order of each node.
     """
     nodes = prgmGraph.get_nodes()
-    edges = prgmGraph.get_edges()
     rP = {}
     t = set()
     visited = set()
+    global k
     k = len(nodes)
-    dfs(nodes[0], visited, edges, k, rP, t)
+
+    def dfs(node: Node):
+        global k
+        visited.add(node.number)
+        for edge in node.outgoing_edges:
+            if edge.end.number not in visited:
+                t.add(f"{edge.start.number}, {edge.end.number}")
+                dfs(node=edge.end)
+        rP[node.number] = k
+        k = k-1
+    dfs(nodes[0])
     return t, rP
-
-
-def dfs(node: Node, visited: Set[Node], edges: List[Edge], k: int, rP: Dict, t: set):
-    visited.add(node.number)
-    for edge in node.outgoing_edges:
-        if edge.end.number not in visited:
-            t.add(f"{edge.start.number}, {edge.end.number}")
-            dfs(node=edge.end, visited=visited, edges=edges, k=k, rP=rP, t=t)
-            rP[node.number] = k
-            k = k-1
