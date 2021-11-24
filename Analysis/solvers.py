@@ -46,6 +46,7 @@ class RoundRobinAlgorithm(AbstractSolverAlgorithm):
             vrp = sort_rp(list(worklist.pendingNodes), self.rP)
             q = vrp.pop(0)
             worklist.currentNodes = vrp
+            worklist.pendingNodes = set()
             return q
         return worklist.currentNodes.pop(0)
 
