@@ -9,9 +9,12 @@ grammar = Lark(r"""
     %ignore WS
 
     program: (statement | declaration)*
-    declaration: "int" variable";"
-                | "int["NUMBER"] " variable";"
-                | "{int fst; int snd} " variable";"
+    declaration: var_declare
+                | arr_declare
+                | rec_declare
+    var_declare: "int" variable";"
+    arr_declare: "int["NUMBER"] " variable";"
+    rec_declare: "{int fst; int snd} " variable";"
     statement: assignment
             | if
             | else
