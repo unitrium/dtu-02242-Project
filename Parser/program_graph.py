@@ -181,20 +181,20 @@ def high_level_edges(tree: Tree) -> Tuple[List[Edge], Node]:
 
 def expand_a_expr(tree: Tree) -> AExpr:
     """Given an a_expr tree unfolds the a_expr"""
-    expr = AExpr([])
+    expr = []
     for child in tree.children:
         if isinstance(child, Token):
-            expr.expression.append(child.value)
+            expr.append(child.value)
         elif child.data == "access":
             var = expand_access(child)
-            expr.expression.append(var)
+            expr.append(var)
         elif child.data == "opa":
             var = expand_opa(child)
-            expr.expression.append(var)
+            expr.append(var)
         else:  # Case nested in another opa
             for expr_a in expand_a_expr(child).expression:
-                expr.expression.append(expr_a)
-    return expr
+                expr.append(expr_a)
+    return AExpr(expr)
 
 
 def expand_b_expr(tree: Tree) -> BExpr:

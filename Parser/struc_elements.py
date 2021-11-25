@@ -36,14 +36,58 @@ class VariableAccess:
         return VariableAccess(self.name, self.variable_type, self.rec_type, child_accesses)
 
 
+class Operation:
+    """An object representing an operation between two variables."""
+    right: Union["Operation", "AExpr"]
+    left: Union["Operation", "AExpr"]
+    operator: str
+
+    def __init__(self, aexpr: "AExpr") -> None:
+        if "*" in aexpr.expression:
+            index = aexpr.expression.index("*")
+            self.operator = "*"
+        elif "/" in aexpr.expression:
+            index = aexpr.expression.index("/")
+            self.operator = "/"
+        elif "%" in aexpr.expression:
+            index = aexpr.expression.index("%")
+            self.operator = "%"
+        elif "+" in aexpr.expression:
+            index = aexpr.expression.index("+")
+            self.operator = "+"
+        elif "-" in aexpr.expression:
+            index = aexpr.expression.index("-")
+            self.operator = "-"
+        else:
+            raise Exception("Not an operation.")
+        left = AExpr(aexpr.expression[0:index])
+        if len(left.expression) == 1:
+            self.left = left
+        else:
+            self.left = Operation(left)
+        right = AExpr(aexpr.expression[index+1:])
+        if len(right.expression) == 1:
+            self.right = right
+        else:
+            self.right = Operation(right)
+
+    def __str__(self) -> str:
+        return f"{self.left} {self.operator} {self.left}"
+
+
 class AbstractExpr:
     """An abstract class representing an expression."""
     expression: List[Union[VariableAccess, str]]
+    operation: Operation
 
     def __init__(self, expression: List[Union[VariableAccess, str]]) -> None:
         self.expression = []
         for expr in expression:
             self.expression.append(expr)
+        try:
+            self.operation = Operation(self)
+        except Exception as err:
+            pass
 
     def __str__(self) -> str:
         return " ".join([str(expr) for expr in self.expression])

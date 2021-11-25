@@ -87,8 +87,14 @@ def worklist(prgmGraph: ProgramGraph, analysis: AbstractAnalysis, algorithmClass
             for edge in q0.outgoing_edges:
                 s_q0 = analysis.update_mapping(aa[edge.start.number], edge)
                 if not analysis.included(mapping1=s_q0, mapping2=aa[edge.end.number]):
+                    print('Here', edge.end.number)
+                    test = analysis.merge(
+                        s_q0, aa[edge.end.number])
                     aa[edge.end.number] = analysis.merge(
                         s_q0, aa[edge.end.number])
+                    print("Test:", test)
                     algorithm.insert(edge.end, worklist)
+                else:
+                    print("Not here")
         steps += 1
     return aa, steps
