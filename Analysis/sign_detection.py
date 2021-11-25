@@ -17,7 +17,7 @@ class SignDetectionAnalysis(ReachingDefintionAnalysis):
             "record": {}
         }
         for var_type, variables in programGraph.variables.items():
-            for var in variables:
+            for var in variables.keys():
                 assignment[var_type][var] = {"+", "0", "-"}
         return assignment
 

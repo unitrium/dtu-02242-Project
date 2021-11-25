@@ -4,8 +4,43 @@ VALID_B_OPERATORS = {"&", "|", "not"}
 VALID_R_OPERATORS = {">", "<", ">=", "<=", "=="}
 
 
+class VariableDeclaration:
+    """
+    An object representing a variable declaration. Fx: int[3] A;
+    Used to store informations about a variable.
+    name: str Name of the variable
+    variable_type: str can be variable, array or record.
+    array_len: int in the case of an array the length of the array.
+    """
+    name: str
+    variable_type: str
+    array_len: int
+
+    def __init__(self, name: str, variable_type: str, array_len: int = None) -> None:
+        self.name = name
+        if variable_type not in ["variable", "array", "record"]:
+            raise Exception(f"Invalid variable type: {variable_type}")
+        self.variable_type = variable_type
+        if variable_type == "array" and array_len is None:
+            raise Exception(f"Array length needs to be specified.")
+        self.array_len = array_len
+
+    def __str__(self) -> str:
+        if self.variable_type == "variable":
+            return f"int {self.name}"
+        elif self.variable_type == "record":
+            return "{int fst; int snd} " + self.name
+        return f"int[{self.array_len}] {self.name}"
+
+
 class VariableAccess:
-    """An object representing an access to a variable."""
+    """
+    An object representing an access to a variable. Fx: a command accessing the variable a, or A[1] or R.fst.
+    name: str Name of the variable
+    child_accesses: AExpr in the case of an array the arithemetic expression computing the index.
+    variable_type: str can be variable, array or record.
+    rec_type: str in the case of a record specify wether it's fst or snd.
+    """
     name: str
     child_accesses: "AExpr"
     variable_type: str
@@ -13,6 +48,8 @@ class VariableAccess:
 
     def __init__(self, name: str, variable_type: str, rec_type: str = "", child_accesses: "AExpr" = None) -> None:
         self.name = name
+        if variable_type not in ["variable", "array", "record"]:
+            raise Exception(f"Invalid variable type: {variable_type}")
         self.variable_type = variable_type
         if variable_type == "record":
             if not rec_type == "fst" and not rec_type == "snd":

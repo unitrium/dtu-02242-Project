@@ -3,10 +3,10 @@
 
 from typing import Dict, List, Set, Tuple, Union
 from .parser import grammar
-from .struc_elements import AExpr, BExpr, VariableAccess
+from .struc_elements import AExpr, BExpr, VariableAccess, VariableDeclaration
 from lark import Tree, Token
 from .utils import check_edges
-POSSIBLE_ACTIONS = ["assign", "read", "write", "boolean"]
+POSSIBLE_ACTIONS = ["assign", "read", "write", "boolean", "declare"]
 
 
 class Node:
@@ -28,12 +28,19 @@ class Node:
 
 
 class Action:
+    """
+    A class representing an action.
+    action_type: str the type of the action can be assign, read, write, declare, boolean
+    variable: VariableAccess the variable that is being set.
+    right_expression: Union[AExpr, BExpr] the expression that is on the right of an assignment.
+    Fx: A[b+1] = a+c that would be a+c.
+    For a boolean expression the right expression is the boolean expression itself.
+    """
     action_type: str
-    variable: VariableAccess
+    variable: Union[VariableAccess, VariableDeclaration]
     right_expression: Union[AExpr, BExpr]
-    label: str
 
-    def __init__(self, action_type: str, variable: VariableAccess = None, right_expression: Union[AExpr, BExpr] = None) -> None:
+    def __init__(self, action_type: str, variable: Union[VariableAccess, VariableDeclaration] = None, right_expression: Union[AExpr, BExpr] = None) -> None:
         if action_type not in POSSIBLE_ACTIONS:
             raise Exception(f"Unknown action: {action_type}")
         elif action_type == "assign":
@@ -77,7 +84,7 @@ class Edge:
 class ProgramGraph:
     nodes: Dict[int, Node]
     edges: List[Edge]
-    variables: Dict[str, Set]
+    variables: Dict[str, Dict[str, VariableDeclaration]]
 
     def __init__(self, program: str) -> None:
         tree = grammar.parse(program)
@@ -87,12 +94,13 @@ class ProgramGraph:
             0: init_node
         }
         self.__explore_nodes()
-        self.variables = {
+        variables = {
             "variable": set(),
             "array": set(),
             "record": set()
         }
-        get_all_variables(tree, self.variables)
+        get_all_variables(tree, variables)
+        self.variables = get_all_declared_variables(variables, self.edges)
 
     def get_edges(self) -> List[Edge]:
         """Returns a deep copy of the edges."""
@@ -114,7 +122,7 @@ class ProgramGraph:
             self.nodes[edge.end.number] = edge.end
 
 
-def compute_edges(start: Node, end: Node, tree: Tree) -> Set[Edge]:
+def compute_edges(start: Node, end: Node, tree: Tree) -> List[Edge]:
     if tree.data == "assignment" or tree.data == "read" or tree.data == "write":
         action: Action = None
         # Parsing the Tree to get the variable that is being accessed.
@@ -160,6 +168,26 @@ def compute_edges(start: Node, end: Node, tree: Tree) -> Set[Edge]:
     elif tree.data == "statement":
         end.number = start.number + 1
         return compute_edges(start, end, tree.children[0])
+    elif tree.data == "declaration":
+        end.number = start.number + 1
+        variable = None
+        if tree.children[0].data == "var_declare":
+            variable = VariableDeclaration(
+                name=tree.children[0].children[0].children[0].value,
+                variable_type="variable"
+            )
+        elif tree.children[0].data == "arr_declare":
+            variable = VariableDeclaration(
+                name=tree.children[0].children[1].children[0].value,
+                variable_type="array",
+                array_len=tree.children[0].children[0].value
+            )
+        else:
+            variable = VariableDeclaration(
+                name=tree.children[0].children[0].children[0].value,
+                variable_type="record"
+            )
+        return [Edge(start, end, Action("declare", variable))]
 
 
 def high_level_edges(tree: Tree) -> Tuple[List[Edge], Node]:
@@ -285,7 +313,25 @@ def get_all_variables(tree: Tree, variables: Dict):
         variables["array"].add(tree.children[0].children[0].value)
         if isinstance(tree.children[1], Tree):
             get_all_variables(tree.children[1], variables)
+    elif tree.data == "declaration":
+        pass
     else:
         for child in tree.children:
             if isinstance(child, Tree):
                 get_all_variables(child, variables)
+
+
+def get_all_declared_variables(variables: Dict, edges: List[Edge]) -> Dict:
+    """Gets all declared variables and returns an error if a variable as not been declared."""
+    declarations = {
+        "variable": dict(),
+        "array": dict(),
+        "record": dict()
+    }
+    for edge in filter(lambda x: isinstance(x.action.variable, VariableDeclaration), edges):
+        declarations[edge.action.variable.variable_type][edge.action.variable.name] = edge.action.variable
+    for variable_type, var in variables.items():
+        for var_name in var:
+            if var_name not in declarations[variable_type]:
+                raise Exception(f"Variable {var_name} not declared.")
+    return declarations

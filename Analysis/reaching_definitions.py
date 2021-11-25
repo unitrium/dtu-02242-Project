@@ -10,7 +10,6 @@ class ReachingDefintionAnalysis(AbstractAnalysis):
         """Merge two mappings."""
         merge = AbstractAnalysis.merge(mapping1, mapping2)
         if merge is not None:
-            print("Merge:", merge)
             return ReachingDefintionAnalysis.copy_mapping(merge)
         new_matching = ReachingDefintionAnalysis.copy_mapping(mapping1)
         for var_type, variables in mapping2.items():
@@ -41,7 +40,7 @@ class ReachingDefintionAnalysis(AbstractAnalysis):
             "record": {}
         }
         for var_type, variables in programGraph.variables.items():
-            for var in variables:
+            for var in variables.keys():
                 assignment[var_type][var] = {"?,0"}
         return assignment
 
