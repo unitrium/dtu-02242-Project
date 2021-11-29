@@ -63,11 +63,8 @@ class SignDetectionMapping:
                 newSet = set([sign for sign in signs[i]])
                 newMapping.record[var_name].append(newSet)
         for var_name, signs in self.array.items():
-            for i in range(len(signs)):
-                if var_name not in newMapping.array:
-                    newMapping.array[var_name] = []
-                newSet = set([sign for sign in signs[i]])
-                newMapping.array[var_name].append(newSet)
+            if var_name not in newMapping.array:
+                newMapping.array[var_name] = set([sign for sign in signs])
         return newMapping
 
     def __str__(self) -> str:
@@ -109,7 +106,12 @@ class SignDetectionAnalysis(ReachingDefintionAnalysis):
                 else:
                     new_mapping.record[edge.action.variable.name][1] = new_sign
             else:
-                pass  # TODO implement for array.
+                index_sign = reccursive_sign(
+                    edge.action.variable.child_accesses, mapping)
+                if len(index_sign) == 0:
+                    new_mapping.array[edge.action.variable.name] = set()
+                else:
+                    new_mapping.array[edge.action.variable.name] = new_sign
         if edge.action.action_type == "boolean":
             return reccursive_boolean_sign(edge.action.right_expression.operation, new_mapping)
         return new_mapping
@@ -161,7 +163,7 @@ def reccursive_sign(operation: Union[Operation, AExpr], mapping: SignDetectionMa
     """Given an operation or an arithmetic exprresion extracts the sign."""
     if isinstance(operation, AExpr):
         if len(operation.expression) > 1:
-            return reccursive_sign(operation.operation)
+            return reccursive_sign(operation.operation, mapping)
         variable = operation.expression[0]
         # This is a direct int.
         if isinstance(variable, str):
