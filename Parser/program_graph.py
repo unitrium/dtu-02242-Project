@@ -61,6 +61,12 @@ class Action:
             return f"{self.action_type} {self.variable}"
         elif self.action_type == "boolean":
             return str(self.right_expression)
+        elif self.action_type == "declare":
+            if self.variable.variable_type == "array":
+                return f"int[{self.variable.array_len}] {self.variable.name}"
+            elif self.variable.variable_type == "record":
+                return "{int fst; int snd} " + self.variable.name
+            return f"int {self.variable.name}"
 
 
 class Edge:
