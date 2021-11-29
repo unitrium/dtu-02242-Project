@@ -182,15 +182,16 @@ def reccursive_sign(operation: Union[Operation, AExpr], mapping: SignDetectionMa
         else:
             left_sign = mapping.get_result(operation.left.expression[0])
     if operation.operator == "*":
-        return mul_sign(left_sign, right_sign)
+        fct = mul_sign
     elif operation.operator == "/":
-        return div_sign(left_sign, right_sign)
+        fct = div_sign
     elif operation.operator == "%":
-        return mod_sign(left_sign, right_sign)
+        fct = mod_sign
     elif operation.operator == "+":
-        return add_sign(left_sign, right_sign)
+        fct = add_sign
     elif operation.operator == "-":
-        return sub_sign(left_sign, right_sign)
+        fct = sub_sign
+    return abstract_arithmetic(left_sign, right_sign, fct)
 
 
 def reccursive_boolean_sign(operation: BooleanOperation, mapping: SignDetectionMapping) -> SignDetectionMapping:
