@@ -226,21 +226,21 @@ def expand_a_expr(tree: Tree) -> AExpr:
 
 
 def expand_b_expr(tree: Tree) -> BExpr:
-    expr = BExpr([])
+    expr = []
     for child in tree.children:
         if isinstance(child, Token):
-            expr.expression.append(child.value)
+            expr.append(child.value)
         elif child.data == "a_expr":
-            expr.expression.append(expand_a_expr(child))
+            expr.append(expand_a_expr(child))
         elif child.data == "opr":
-            expr.expression.append(expand_opr(child))
+            expr.append(expand_opr(child))
         elif child.data == "opb":
-            expr.expression.append(expand_opb(child))
+            expr.append(expand_opb(child))
         else:  # Case nested in another opa
             if child.data == "not":
-                expr.expression.append("not")
-            expr.expression.append(expand_b_expr(child))
-    return expr
+                expr.append("not")
+            expr.append(expand_b_expr(child))
+    return BExpr(expr)
 
 
 def expand_opa(tree: Tree) -> str:

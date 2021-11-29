@@ -8,6 +8,7 @@ program = "int[3] A; int a; int b; int c; int x; {int fst; int snd} R; if (a < 2
 
 pg = ProgramGraph(program)
 assignment, steps = worklist(
-    pg, LiveVariableAnalysis, RoundRobinAlgorithm)
+    pg, SignDetectionAnalysis, RoundRobinAlgorithm)
+
 print(steps)
-# display_assignment(assignment)
+display_assignment(assignment)

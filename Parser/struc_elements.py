@@ -75,8 +75,8 @@ class VariableAccess:
 
 class BooleanOperation:
     """An object representing a boolean operation."""
-    right: Union[Union["BooleanOperation", "Operation"], "BExpr"]
-    left: Union[Union["BooleanOperation", "Operation"], "BExpr"]
+    right: Union["BooleanOperation", "AbstractExpr"]
+    left: Union["BooleanOperation", "AbstractExpr"]
     operator: str
 
     def __init__(self, bexpr: "BExpr") -> None:
@@ -91,12 +91,9 @@ class BooleanOperation:
             self.operator = "not"
         # No more boolean operators this is now a relational operation.
         else:
-            operation = Operation(bexpr)
-            self.left = operation.left
-            self.right = operation.right
-            self.operator = operation.operator
+            self.__relative_init(bexpr)
             return
-        left = BExpr(bexpr.expression[0:index])
+        left = BExpr(bexpr.expression[0: index])
         if not self.operator == "not":
             self.left = BooleanOperation(left)
         # not operator will have the left empty.
@@ -105,28 +102,58 @@ class BooleanOperation:
         right = BExpr(bexpr.expression[index+1:])
         self.right = BooleanOperation(right)
 
+    def is_relational(self) -> bool:
+        """Indicates whether the operation is a relational boolean operaton."""
+        return self.operator in VALID_R_OPERATORS
+
     def __str__(self) -> str:
         return f"{'' if self.left is None else self.left} {self.operator} {self.right}"
 
+    def __relative_init(self, bexpr: "BExpr") -> None:
+        """To call to initialize the operation as a relative operation."""
+        nb_relative_operations = 0
+        for r_operator in VALID_R_OPERATORS:
+            if r_operator in bexpr.expression:
+                nb_relative_operations += 1
+                index = bexpr.expression.index(r_operator)
+                self.operator = r_operator
+        if nb_relative_operations > 1:
+            raise Exception(
+                "Error a relative operation was supplied with multiple relational operators.")
+        left_expr = []
+        for expr in bexpr.expression[0:index]:
+            if isinstance(expr, AExpr):
+                for sub_expr in expr.expression:
+                    left_expr.append(sub_expr)
+            else:
+                left_expr.append(expr)
+        left = AExpr(left_expr)
+        if len(left.expression) == 1:
+            self.left = left
+        else:
+            self.left = Operation(left)
+        right_expr = []
+        for expr in bexpr.expression[index+1:]:
+            if isinstance(expr, AExpr):
+                for sub_expr in expr.expression:
+                    right_expr.append(sub_expr)
+            else:
+                right_expr.append(expr)
+        right = AExpr(right_expr)
+        if len(right.expression) == 1:
+            self.right = right
+        else:
+            self.right = Operation(right)
+
 
 class Operation:
-    """An object representing an arithmetic or relational operation between two variables."""
+    """An object representing an arithmetic operation between two variables."""
     right: Union["Operation", "AbstractExpr"]
     left: Union["Operation", "AbstractExpr"]
     operator: str
 
-    def __init__(self, aexpr: Union["AExpr", "BExpr"]) -> None:
-        if isinstance(aexpr, BExpr):
-            nb_relative_operations = 0
-            for r_operator in VALID_R_OPERATORS:
-                if r_operator in aexpr.expression:
-                    nb_relative_operations += 1
-                    index = aexpr.expression.index(r_operator)
-                    self.operator = r_operator
-            if nb_relative_operations > 1:
-                raise Exception(
-                    "Error a relative operation was supplied with multiple relational operators.")
-        elif "*" in aexpr.expression:
+    def __init__(self, aexpr: "AExpr") -> None:
+        if "*" in aexpr.expression:
             index = aexpr.expression.index("*")
             self.operator = "*"
         elif "/" in aexpr.expression:
@@ -214,14 +241,14 @@ class AExpr(AbstractExpr):
 
 class BExpr(AbstractExpr):
     """An object representing an arithmetic expression."""
+    expression: List[Union[AExpr, VariableAccess, str]]
 
-    def __init__(self, expression: List[Union[VariableAccess, str]]) -> None:
+    def __init__(self, expression: List[Union[AExpr, VariableAccess, str]]) -> None:
         self.expression = []
         for expr in expression:
             self.expression.append(expr)
         if len(self.expression) > 0:
             self.operation = BooleanOperation(self)
-            print(self.operation)
 
     def copy(self) -> "BExpr":
         """Deep copy of an expression."""
