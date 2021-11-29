@@ -30,6 +30,7 @@ class SignDetectionMapping:
                     else:
                         self.variable[var] = set()
 
+
     def get_result(self, variable: VariableAccess):
         if variable.variable_type == "variable":
             return self.variable[variable.name]
