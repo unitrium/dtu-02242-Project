@@ -23,12 +23,12 @@ class SignDetectionMapping:
             for var_type, variables in programGraph.variables.items():
                 for var in variables.keys():
                     if var_type == "array":
-                        self.array[var] = {}
+                        self.array[var] = set()
                     elif var_type == "record":
                         self.record[var] = [
-                            {"+", "0", "-"}] * 2
+                            set()] * 2
                     else:
-                        self.variable[var] = {"+", "0", "-"}
+                        self.variable[var] = set()
 
     def get_result(self, variable: VariableAccess):
         if variable.variable_type == "variable":
