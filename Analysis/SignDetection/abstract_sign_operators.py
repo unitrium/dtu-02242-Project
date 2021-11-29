@@ -1,4 +1,4 @@
-from typing import Set
+from typing import Callable, Set
 
 """Relational operators."""
 
@@ -45,109 +45,102 @@ def not_sign(signs: Set[str]) -> Set[str]:
 """Arithmetic operators."""
 
 
-def mul_sign(left_sign: Set[str], right_sign: Set[str]) -> Set[str]:
-    if handle_nul(left_sign, right_sign) is not None:
-        return handle_nul(left_sign, right_sign)
-    result = handle_undef(left_sign, right_sign)
-    left_sign = left_sign - {"undef"}
-    right_sign = right_sign - {"undef"}
-    if left_sign == {"+", "0", "-"} or right_sign == {"+", "0", "-"}:
-        return result.union({"+", "0", "-"})
-    if left_sign == {"0"} or right_sign == {"0"}:
-        return result.union({"0"})
-    if "0" in left_sign or "0" in right_sign:
-        result.add("0")
-    if "-" in left_sign and "-" in right_sign and "+" in left_sign and "+" in right_sign:
-        result.add("+")
-    if "-" in left_sign and "+" in right_sign and "+" in left_sign and "-" in right_sign:
-        result.add("-")
+def handle_null_undef(left: Set[str], right: Set[str]) -> Set[str]:
+    if len(left) == 0 or len(right) == 0:
+        return set()
+    if "undef" in left or "undef" in right:
+        return set("undef")
+
+
+def mul_sign(left: Set[str], right: Set[str]) -> Set[str]:
+    """Abstract multiplication for set of one element"""
+    if handle_null_undef(left, right) is not None:
+        return handle_null_undef(left, right)
+    if "0" in left or "0" in right:
+        return set("0")
+    if left == right:
+        return set("+")
+    return set("-")
+
+
+def div_sign(left: Set[str], right: Set[str]) -> Set[str]:
+    if handle_null_undef(left, right) is not None:
+        return handle_null_undef(left, right)
+    if "0" in right:
+        return set("undef")
+    return mul_sign(left, right)
+
+
+def add_sign(left: Set[str], right: Set[str]) -> Set[str]:
+    if handle_null_undef(left, right) is not None:
+        return handle_null_undef(left, right)
+    if "0" in left:
+        return set([key for key in right])
+    if "0" in right:
+        return set([key for key in left])
+    if left == right:
+        return set([key for key in left])
+    else:
+        return set(["+", "0", "-"])
+
+
+def sub_sign(left: Set[str], right: Set[str]) -> Set[str]:
+    if handle_null_undef(left, right) is not None:
+        return handle_null_undef(left, right)
+    return add_sign(left, negation_sign(right))
+
+
+def negation_sign(right: Set[str]) -> Set[str]:
+    """Negates a set of one sign."""
+    if len(right) == 0:
+        return set()
+    if "undef" in right:
+        return set("undef")
+    if "+" in right:
+        return set("-")
+    elif "-" in right:
+        return set("+")
+    else:
+        return set("0")
+
+
+def mod_sign(left: Set[str], right: Set[str]) -> Set[str]:
+    if handle_null_undef(left, right) is not None:
+        return handle_null_undef(left, right)
+    if "0" in right:
+        return set("undef")
+    if "0" in left:
+        return set("0")
+    if "+" in left and "+" in right:
+        return set(["+", "0"])
+    if "+" in left and "-" in right:
+        return set(["-", "0"])
+    if "-" in left and "+" in right:
+        return set(["+", "0"])
+    else:
+        return set(["-", "0"])
+
+
+def abstract_arithmetic(left: Set[str], right: Set[str], fct: Callable) -> Set[str]:
+    if len(left) == 0 or len(right) == 0:
+        return set()
+    result = set()
+    for left_sign in left:
+        for right_sign in right:
+            for key in fct(left_sign, right_sign):
+                result.add(key)
     return result
-
-
-def div_sign(left_sign: Set[str], right_sign: Set[str]) -> Set[str]:
-    if handle_nul(left_sign, right_sign) is not None:
-        return handle_nul(left_sign, right_sign)
-    result = handle_undef(left_sign, right_sign)
-    if "0" in right_sign:
-        result.add("undef")
-    result.union(mul_sign(left_sign, right_sign))
-    return result - set("0")
-
-
-def mod_sign(left_sign: Set[str], right_sign: Set[str]) -> Set[str]:
-    if handle_nul(left_sign, right_sign) is not None:
-        return handle_nul(left_sign, right_sign)
-    result = handle_undef(left_sign, right_sign)
-    left_sign = left_sign - {"undef"}
-    right_sign = right_sign - {"undef"}
-    if "0" in right_sign:
-        result.add("undef")
-    if right_sign == {"0"}:
-        return result
-    result.add("0")
-    if left_sign == {"0"}:
-        return result
-    if "-" in left_sign:
-        result.add("+")
-    if "+" in left_sign and "+" in right_sign:
-        result.add("+")
-    if "-" in left_sign and "-" in right_sign:
-        result.add("-")
-    if "+" in left_sign and "-" in right_sign:
-        result.add("-")
-    if "-" in left_sign and "+" in right_sign:
-        result.add("+")
-    return result
-
-
-def add_sign(left_sign: Set[str], right_sign: Set[str]) -> Set[str]:
-    if handle_nul(left_sign, right_sign) is not None:
-        return handle_nul(left_sign, right_sign)
-    result = handle_undef(left_sign, right_sign)
-    left_sign = left_sign - {"undef"}
-    right_sign = right_sign - {"undef"}
-    if left_sign == {"+", "0", "-"} or right_sign == {"+", "0", "-"}:
-        return result.union({"+", "0", "-"})
-    if left_sign == {"0"}:
-        return result.union(right_sign)
-    if right_sign == {"0"}:
-        return result.union(left_sign)
-    difference = (right_sign + left_sign -
-                  right_sign.intersection(left_sign)) - set("undef")
-    if len(difference) == 0:
-        if "0" in right_sign:
-            return result.union(right_sign - {"0"})
-        return result.union(right_sign)
-    if "0" in difference:
-        return result.union(right_sign - {"0"})
-    return result.union({"+", "0", "-"})
 
 
 def negation(sign: Set[str]) -> Set[str]:
     """Returns the negation of a sign set."""
-    if handle_nul(sign) is not None:
-        return handle_nul(sign)
-    result = handle_undef(sign)
-    sign = sign - {"undef"}
-    if sign == {"+", "0", "-"}:
-        return result.union({"+", "0", "-"})
-    if "0" in sign:
-        if "+" in sign:
-            return result.union({"0", "-"})
-        return result.union({"0", "+"})
-    return result.union({"0", "-"})
-
-
-def handle_nul(left: Set[str], right: Set[str] = set()) -> Set[str]:
-    if len(left) == 0 or len(right) == 0:
+    if len(sign) == 0:
         return set()
-
-
-def handle_undef(left: Set[str], right: Set[str] = set()) -> Set[str]:
-    if "undef" in left or "undef" in right:
-        return set("undef")
-    return set()
-
-
-def sub_sign(left_sign: Set[str], right_sign: Set[str]) -> Set[str]:
-    return add_sign(left_sign, negation(right_sign))
+    result = set("undef") if "undef" in sign else set()
+    if "0" in sign:
+        result.union({"0"})
+    if "-" in sign:
+        result.union({"+"})
+    if "+" in sign:
+        result.union({"-"})
+    return result
