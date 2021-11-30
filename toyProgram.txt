@@ -1,0 +1,7 @@
+int a;
+int b;
+int[2] A;
+read a;
+b:= 1;
+if (a > b) {write a;}
+A[b]:= a - 1;

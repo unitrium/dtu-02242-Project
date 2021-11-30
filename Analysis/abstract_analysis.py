@@ -7,11 +7,11 @@ class AbstractAnalysis:
     def merge(mapping1: Dict, mapping2: Dict) -> Dict:
         """Merge two mappings."""
         if mapping2 == "undef" and not mapping1 == "undef":
-            return mapping1
+            return mapping1.copy()
         elif mapping2 == "undef" and mapping1 == "undef":
             return "undef"
         elif mapping1 == "undef":
-            return mapping2
+            return mapping2.copy()
 
     @staticmethod
     def included(mapping1: Dict, mapping2: Dict) -> bool:

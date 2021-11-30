@@ -1,21 +1,28 @@
 int a;
 int b;
+int c;
+int right;
+int left;
+int x;
+int y;
 a := 11;
 b := 4;
 left := 0;
 right := 1;
 int[20] Data;
 int[25] Node;
-(int fst, int snd) R;
+int Node;
+int Data;
+{int fst; int snd} R;
 R.fst := 200;
 R.snd := 420;
 
 while (true) {
-	write b-a;
-	while ( ( R.fst / 2 ) == 0) {
+	write b;
+	c := R.fst / 2;
+	while ( c == 0) {
 		read x;
 		write R.fst;
-		
 		while (R.snd <= 430) {
 			if ( a/2 == 0 ) {
 				write x;
@@ -27,44 +34,42 @@ while (true) {
 		if ( Data != 0 ) {
 			if (Data < 20) {
 	            if ( left == 0 ) {
-               		left = Node(Data);
+               		left := Node[Data[1]];
 				} else {
                     write R.fst;
 				} 
 			} else {
 				if ( right == 0 ) {
-               		right = Node(Data);
+               		right := Node[Data[1]];
 				} else {
                    	write R.snd;
 				}
 			}
 		}
-
-		int[20] temp;
 		while ( Data < 19 ) {
 			while (Node <= Data) {
- 		        if Data[right] > Data[right+1] {
-            		temp = Data[right];
+ 		        if (Data[right] > Data[right+1]) {
+            		write a;
 				}
- 	           	Data[ right ] = Data[ right + 1 ]
-            	Data[ right + 1 ] = temp
+ 	           	Data[ right ] := Data[ right + 1 ];
+            	Data[ right + 1 ] := a;
 			}
 		}
 
 		while ( Data < 20 ) {
 			while (Node <= Data) {
- 		        if Data[right] > Data[right+1] {
-            		temp = Data[right];
+ 		        if (Data[right] > Data[right+1]) {
+            		a := Data[right];
 				}
- 	           	Data[ right ] = Data[ right + 1 ]
-            	Data[ right + 1 ] = temp
+ 	           	Data[ right ] := Data[ right + 1 ];
+            	Data[ right + 1 ] := a;
 				while ( Data < 5 ) {
 					while (Node <= Data) {
- 		        		if Data[right] > Data[right+1] {
-            				temp = Data[right];
+ 		        		if (Data[right] > Data[right+1]) {
+            				a := Data[right];
 						}
- 	           			Data[ right ] = Data[ right + 1 ]
-            			Data[ right + 1 ] = temp
+ 	           			Data[ right ] := Data[ right + 1 ];
+            			Data[ right + 1 ] := a;
 					}
 				}
 			}

@@ -15,12 +15,12 @@ grammar = Lark(r"""
     var_declare: "int" variable";"
     arr_declare: "int["NUMBER"] " variable";"
     rec_declare: "{int fst; int snd} " variable";"
-    statement: assignment
+    statement: (assignment
             | if
             | else
             | while
             | read
-            | write
+            | write)*
     if: "if ("b_expr") {" statement "}"
     else: "if ("b_expr") {" statement "} else {"statement"}"
     while: "while ("b_expr") {" statement "}"

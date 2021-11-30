@@ -117,9 +117,10 @@ class BooleanOperation:
                 nb_relative_operations += 1
                 index = bexpr.expression.index(r_operator)
                 self.operator = r_operator
-        if nb_relative_operations > 1:
+        if nb_relative_operations != 1:
+            print(bexpr)
             raise Exception(
-                "Error a relative operation was supplied with multiple relational operators.")
+                f"Error a relative operation was supplied with 0 or multiple relational operators. {bexpr}")
         left_expr = []
         for expr in bexpr.expression[0:index]:
             if isinstance(expr, AExpr):
