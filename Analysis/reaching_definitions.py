@@ -10,7 +10,7 @@ class ReachingDefintionAnalysis(AbstractAnalysis):
         """Merge two mappings."""
         merge = AbstractAnalysis.merge(mapping1, mapping2)
         if merge is not None:
-            return ReachingDefintionAnalysis.copy_mapping(merge)
+            return merge
         new_matching = ReachingDefintionAnalysis.copy_mapping(mapping1)
         for var_type, variables in mapping2.items():
             for var in variables.keys():

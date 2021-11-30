@@ -12,7 +12,7 @@ from .utils import sign
 class SignDetectionMapping:
     """Structure to represent a mapping."""
     variable: Dict[str, Set[str]]
-    array: Dict[str, List[Set[str]]]
+    array: Dict[str, Set[str]]
     record: Dict[str, List[Set[str]]]
 
     def __init__(self, programGraph: ProgramGraph = None) -> None:
@@ -29,7 +29,6 @@ class SignDetectionMapping:
                             set()] * 2
                     else:
                         self.variable[var] = set()
-
 
     def get_result(self, variable: VariableAccess):
         if variable.variable_type == "variable":
@@ -48,8 +47,7 @@ class SignDetectionMapping:
             else:
                 self.record[variable.name][1] = value
         elif variable.variable_type == "array":
-            # TODO Finish array
-            self.array[variable.name] = value
+            self.array[variable.name] = self.array[variable.name].union(value)
 
     def copy(self) -> "SignDetectionMapping":
         """Returns a deep copy of the mapping."""
@@ -84,35 +82,12 @@ class SignDetectionAnalysis(ReachingDefintionAnalysis):
             return AbstractAnalysis.update_mapping(mapping, edge)
         new_mapping = mapping.copy()
         if edge.action.action_type == "assign":
+            new_sign = reccursive_sign(
+                edge.action.right_expression, mapping)
+            new_mapping.set_result(new_sign, edge.action.variable)
+        if edge.action.action_type == "read":
             new_sign = {"+", "0", "-"}
-            # case we are directly coping from another var or int.
-            if not edge.action.right_expression.operation:
-                variable = edge.action.right_expression.expression[0]
-                # this is an integer.
-                if isinstance(variable, str):
-                    new_sign = sign(int(variable))
-                # this is another var.
-                else:
-                    new_sign = mapping.get_result(
-                        variable)
-            # case we need to explore the arithmetic expression to get the sign.
-            else:
-                new_sign = reccursive_sign(
-                    edge.action.right_expression.operation, mapping)
-            if edge.action.variable.variable_type == "variable":
-                new_mapping.variable[edge.action.variable.name] = new_sign
-            elif edge.action.variable.variable_type == "record":
-                if edge.action.variable.rec_type == "fst":
-                    new_mapping.record[edge.action.variable.name][0] = new_sign
-                else:
-                    new_mapping.record[edge.action.variable.name][1] = new_sign
-            else:
-                index_sign = reccursive_sign(
-                    edge.action.variable.child_accesses, mapping)
-                if len(index_sign) == 0:
-                    new_mapping.array[edge.action.variable.name] = set()
-                else:
-                    new_mapping.array[edge.action.variable.name] = new_sign
+            new_mapping.set_result(new_sign, edge.action.variable)
         if edge.action.action_type == "boolean":
             return reccursive_boolean_sign(edge.action.right_expression.operation, new_mapping)
         return new_mapping
@@ -122,7 +97,7 @@ class SignDetectionAnalysis(ReachingDefintionAnalysis):
         """Merge two mappings."""
         merge = AbstractAnalysis.merge(mapping1, mapping2)
         if merge is not None:
-            return merge.copy()
+            return merge
         new_mapping = mapping1.copy()
         for var_name, signs in mapping2.variable.items():
             new_mapping.variable[var_name] = new_mapping.variable[var_name].union(
@@ -132,9 +107,8 @@ class SignDetectionAnalysis(ReachingDefintionAnalysis):
                 new_mapping.record[var_name][index] = new_mapping.record[var_name][index].union(
                     mapping2.record[var_name][index])
         for var_name, signs in mapping2.array.items():
-            for index, _ in enumerate(new_mapping.array[var_name]):
-                new_mapping.array[var_name][index] = new_mapping.array[var_name][index].union(
-                    mapping2.array[var_name][index])
+            new_mapping.array[var_name] = new_mapping.array[var_name].union(
+                mapping2.array[var_name])
         return new_mapping
 
     @staticmethod
@@ -152,11 +126,10 @@ class SignDetectionAnalysis(ReachingDefintionAnalysis):
                 for sign in signs:
                     if sign not in mapping2.record[var_name][index]:
                         return False
-        for var_name, signList in mapping1.array.items():
-            for index, signs in enumerate(signList):
-                for sign in signs:
-                    if sign not in mapping2.array[var_name][index]:
-                        return False
+        for var_name, signs in mapping1.array.items():
+            for sign in signs:
+                if sign not in mapping2.array[var_name]:
+                    return False
         return True
 
 
