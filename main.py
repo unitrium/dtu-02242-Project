@@ -12,4 +12,4 @@ with open("microCCode.txt", "r") as text:
         pg, SignDetectionAnalysis, LIFOSolverAlgorithm)
 
     print(steps)
-    # display_assignment(assignment)
+    display_assignment(assignment)
