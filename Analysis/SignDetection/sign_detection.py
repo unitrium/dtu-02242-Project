@@ -81,12 +81,18 @@ class SignDetectionAnalysis(ReachingDefintionAnalysis):
         if AbstractAnalysis.update_mapping(mapping, edge) is not None:
             return AbstractAnalysis.update_mapping(mapping, edge)
         new_mapping = mapping.copy()
-        if edge.action.action_type == "assign":
-            new_sign = reccursive_sign(
-                edge.action.right_expression, mapping)
-            new_mapping.set_result(new_sign, edge.action.variable)
-        if edge.action.action_type == "read":
-            new_sign = {"+", "0", "-"}
+        if edge.action.action_type == "assign" or edge.action.action_type == "read":
+            new_sign = set()
+            if edge.action.action_type == "assign":
+                new_sign = reccursive_sign(
+                    edge.action.right_expression, mapping)
+            elif edge.action.action_type == "read":
+                new_sign = {"+", "0", "-"}
+            if edge.action.variable.variable_type == "array":
+                index_sign = reccursive_sign(
+                    edge.action.variable.child_accesses)
+                if "-" in index_sign:
+                    new_sign = set()
             new_mapping.set_result(new_sign, edge.action.variable)
         if edge.action.action_type == "boolean":
             return reccursive_boolean_sign(edge.action.right_expression.operation, new_mapping)
