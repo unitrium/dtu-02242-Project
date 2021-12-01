@@ -9,7 +9,7 @@ with open("microCCode.txt", "r") as text:
     pg = ProgramGraph(text.read())
 
     assignment, steps = worklist(
-        pg, SignDetectionAnalysis, RoundRobinAlgorithm)
+        pg, SignDetectionAnalysis, LIFOSolverAlgorithm)
 
     print(steps)
-    display_assignment(assignment)
+    # display_assignment(assignment)
